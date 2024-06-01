@@ -1,0 +1,73 @@
+name: Master Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release-master:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Create App Token
+        uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_TOKEN }}
+
+      - name: Check Out Repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          ref: nightly
+          fetch-depth: 0
+
+      - name: Create Release Commit and Synchronize Branches
+        run: |
+            value=$(cat VERSION)
+            version="${value%-build*}"
+            next_version="${{ vars.NEXT_VERSION }}"
+            echo "CURRENT_VERSION: '${version}'"
+            echo "NEXT_VERSION: '${next_version}'"
+          
+            if [[ "$version" == "$next_version" ]]; then
+                echo "::error::NEXT_VERSION variable (${next_version}) must be incremented"
+                exit 1
+            fi
+          
+            echo "$next_version" > "VERSION"
+          
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add VERSION
+            git commit -m "Kometa Release ${next_version}"
+            git push origin nightly
+            git push origin refs/heads/nightly:refs/heads/develop
+            git push origin refs/heads/nightly:refs/heads/main
+
+      - name: Discord Success Notification
+        uses: Kometa-Team/discord-notifications@master
+        if: success()
+        with:
+          webhook_id_token: ${{ secrets.BUILD_WEBHOOK }}
+          title: "${{ vars.REPO_NAME }} master release ${{ vars.NEXT_VERSION }}: ${{ vars.TEXT_SUCCESS }}"
+          url: https://github.com/Kometa-Team/${{ vars.REPO_NAME }}/actions/runs/${{ github.run_id }}
+          color: ${{ vars.COLOR_SUCCESS }}
+          username: ${{ vars.BOT_NAME }}
+          avatar_url: ${{ vars.BOT_IMAGE }}
+          author: ${{ vars.GIT_NAME }}
+          author_icon_url: ${{ vars.GIT_IMAGE }}
+
+      - name: Discord Failure Notification
+        uses: Kometa-Team/discord-notifications@master
+        if: failure()
+        with:
+          webhook_id_token: ${{ secrets.BUILD_WEBHOOK }}
+          message: ${{ vars.BUILD_FAILURE_ROLE }}
+          title: "${{ vars.REPO_NAME }} master release ${{ vars.NEXT_VERSION }}: ${{ vars.TEXT_FAILURE }}"
+          url: https://github.com/Kometa-Team/${{ vars.REPO_NAME }}/actions/runs/${{ github.run_id }}
+          color: ${{ vars.COLOR_FAILURE }}
+          username: ${{ vars.BOT_NAME }}
+          avatar_url: ${{ vars.BOT_IMAGE }}
+          author: ${{ vars.GIT_NAME }}
+          author_icon_url: ${{ vars.GIT_IMAGE }}

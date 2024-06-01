@@ -2,6 +2,7 @@ AAC
 accessModes
 Addon
 Adlib
+AFI's
 Amblin
 analytics
 AniDB
@@ -19,6 +20,7 @@ Arrowverse
 Atmos
 Avenir
 BAFTA
+Bambara
 BBFC
 bearlikelion
 Berlinale
@@ -56,6 +58,7 @@ customizable
 customizations
 César
 dbader
+d'Or
 de
 deva
 DIIIVOY
@@ -121,6 +124,7 @@ img
 includer
 init
 integrations
+ints
 io
 iteratively
 Jinja
@@ -150,6 +154,7 @@ linuxserver
 linuxserver's
 localhost
 Looper
+Lossy
 LSIO
 lsio
 Luxembourgish
@@ -175,6 +180,7 @@ microsoft
 mikenobbs
 minikube
 mnt
+Mojo's
 monetization
 Mossi
 MPAA
@@ -200,6 +206,7 @@ OMDb
 oscar
 OSX
 ozzy
+Palme
 pathing
 PCM
 PersistentVolumeClaim
@@ -209,6 +216,7 @@ pkkid
 plex
 plex's
 plexapi
+PlexAPI
 PlexCollection
 PlexPosters
 PNG
@@ -244,6 +252,7 @@ SciFi
 ScudLee
 SDTV
 SemVer
+setuptools
 ShawShank
 Skywalker
 Sohjiro
@@ -255,6 +264,7 @@ StevenLu's
 subprocess
 Sundance
 SxxEyy
+symlink
 symlinks
 Synology
 Systemctl
@@ -286,6 +296,7 @@ tutin
 tv
 TVDb
 UI
+uncompress
 unionfs
 unmanaged
 unplayed

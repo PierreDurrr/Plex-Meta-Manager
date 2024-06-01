@@ -147,7 +147,9 @@ nav:
         - Frequently Asked Questions: kometa/faqs.md
         - Explanation Guides: &guides
           - Overview: kometa/guides/overview.md
+          - Switching from PMM to Kometa: kometa/guides/rebrand.md
           - Plex Ratings Explained: kometa/guides/ratings.md
+          - Kometa Sorting Guide: kometa/guides/order.md
           - Scheduling Kometa Runs Guide: kometa/guides/scheduling.md
           - Image Asset Directory Guide: kometa/guides/assets.md
           - Formula 1 Metadata Guide: kometa/guides/formula.md
@@ -191,7 +193,7 @@ nav:
           - Sonarr: config/sonarr.md
           - Trakt: config/trakt.md
           - MyAnimeList: config/myanimelist.md
-          - Trakt and MyAnimeList Authentication: config/auth.md
+          - Trakt and MyAnimeList Authentication: config/authentication.md
       - OTHER:
         - Scheduling Parts: config/schedule.md
   - KOMETA DEFAULTS:
@@ -223,6 +225,7 @@ nav:
           - Basic Charts: defaults/chart/basic.md
           - AniList Charts: defaults/chart/anilist.md
           - IMDb Charts: defaults/chart/imdb.md
+          - Letterboxd Charts: defaults/chart/letterboxd.md
           - MyAnimeList Charts: defaults/chart/myanimelist.md
           - Tautulli Charts: defaults/chart/tautulli.md
           - TMDb Charts: defaults/chart/tmdb.md

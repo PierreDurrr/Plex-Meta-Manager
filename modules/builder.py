@@ -6,11 +6,10 @@ from modules import anidb, anilist, icheckmovies, imdb, letterboxd, mal, mojo, p
 from modules.util import Failed, FilterFailed, NonExisting, NotScheduled, NotScheduledRange, Deleted
 from modules.overlay import Overlay
 from modules.poster import KometaImage
+from modules.request import quote
 from plexapi.audio import Artist, Album, Track
 from plexapi.exceptions import NotFound
 from plexapi.video import Movie, Show, Season, Episode
-from requests.exceptions import ConnectionError
-from urllib.parse import quote
 
 logger = util.logger
 
@@ -559,9 +558,7 @@ class CollectionBuilder:
                             self.obj = getter(self.name)
                             break
                         except Failed as e:
-                            error = e
-                    else:
-                        logger.error(error)
+                            logger.error(e)
                     raise Deleted(self.delete())
         else:
             self.libraries.append(self.library)
@@ -1182,11 +1179,9 @@ class CollectionBuilder:
         if method_name == "url_poster":
             try:
                 if not method_data.startswith("https://theposterdb.com/api/assets/"):
-                    image_response = self.config.get(method_data, headers=util.header())
-                    if image_response.status_code >= 400 or image_response.headers["Content-Type"] not in util.image_content_types:
-                        raise ConnectionError
+                    self.config.Requests.get_image(method_data)
                 self.posters[method_name] = method_data
-            except ConnectionError:
+            except Failed:
                 logger.warning(f"{self.Type} Warning: No Poster Found at {method_data}")
         elif method_name == "tmdb_list_poster":
             self.posters[method_name] = self.config.TMDb.get_list(util.regex_first_int(method_data, "TMDb List ID")).poster_url
@@ -1209,11 +1204,9 @@ class CollectionBuilder:
     def _background(self, method_name, method_data):
         if method_name == "url_background":
             try:
-                image_response = self.config.get(method_data, headers=util.header())
-                if image_response.status_code >= 400 or image_response.headers["Content-Type"] not in util.image_content_types:
-                    raise ConnectionError
+                self.config.Requests.get_image(method_data)
                 self.backgrounds[method_name] = method_data
-            except ConnectionError:
+            except Failed:
                 logger.warning(f"{self.Type} Warning: No Background Found at {method_data}")
         elif method_name == "tmdb_background":
             self.backgrounds[method_name] = self.config.TMDb.get_movie_show_or_collection(util.regex_first_int(method_data, 'TMDb ID'), self.library.is_movie).backdrop_url
@@ -1412,8 +1405,8 @@ class CollectionBuilder:
                 score_dict = {}
                 for search_method, search_data in dict_data.items():
                     search_attr, modifier = os.path.splitext(str(search_method).lower())
-                    if search_attr == "score" and modifier in ["gt", "gte", "lt", "lte"]:
-                        score = util.parse(self.Type, search_method, dict_data, datatype="int", default=-1, minimum=0, maximum=10, parent=method_name)
+                    if search_attr == "score" and modifier in [".gt", ".gte", ".lt", ".lte"]:
+                        score = util.parse(self.Type, search_method, dict_data, methods=dict_methods, datatype="int", default=-1, minimum=0, maximum=10, parent=method_name)
                         if score > -1:
                             score_dict[modifier] = score
                     elif search_attr not in ["username", "list_name", "sort_by"]:
@@ -1486,7 +1479,7 @@ class CollectionBuilder:
                     raise Failed(f"{self.Type} Error: imdb_id {value} must begin with tt")
         elif method_name == "imdb_list":
             try:
-                for imdb_dict in self.config.IMDb.validate_imdb_lists(self.Type, method_data, self.language):
+                for imdb_dict in self.config.IMDb.validate_imdb_lists(self.Type, method_data):
                     self.builders.append((method_name, imdb_dict))
             except Failed as e:
                 logger.error(e)
@@ -1746,9 +1739,8 @@ class CollectionBuilder:
                         final_attributes["letter"] = util.parse(self.Type, "prefix", dict_data, methods=dict_methods, parent=method_name)
                         final_text += f"\nPrefix: {final_attributes['letter']}"
                     if "type" in dict_methods:
-                        type_list = util.parse(self.Type, "type", dict_data, datatype="commalist", methods=dict_methods, parent=method_name, options=mal.search_types)
-                        final_attributes["type"] = ",".join(type_list)
-                        final_text += f"\nType: {' or '.join(type_list)}"
+                        final_attributes["type"] = util.parse(self.Type, "type", dict_data, methods=dict_methods, parent=method_name, options=mal.search_types)
+                        final_text += f"\nType: {final_attributes['type']}"
                     if "status" in dict_methods:
                         final_attributes["status"] = util.parse(self.Type, "status", dict_data, methods=dict_methods, parent=method_name, options=mal.search_status)
                         final_text += f"\nStatus: {final_attributes['status']}"
@@ -2875,7 +2867,7 @@ class CollectionBuilder:
                 if self.details["changes_webhooks"]:
                     self.notification_removals.append(util.item_set(item, self.library.get_id_from_maps(item.ratingKey)))
             if self.playlist and items_removed:
-                self.library._reload(self.obj)
+                self.library.item_reload(self.obj)
                 self.obj.removeItems(items_removed)
             elif items_removed:
                 self.library.alter_collection(items_removed, self.name, smart_label_collection=self.smart_label_collection, add=False)
@@ -3328,7 +3320,7 @@ class CollectionBuilder:
                         logger.error("Metadata: Failed to Update Please delete the collection and run again")
                     logger.info("")
         else:
-            self.library._reload(self.obj)
+            self.library.item_reload(self.obj)
             #self.obj.batchEdits()
             batch_display = "Collection Metadata Edits"
             if summary[1] and str(summary[1]) != str(self.obj.summary):
@@ -3449,8 +3441,8 @@ class CollectionBuilder:
             elif style_data and "tpdb_background" in style_data and style_data["tpdb_background"]:
                 self.backgrounds["style_data"] = f"https://theposterdb.com/api/assets/{style_data['tpdb_background']}"
 
-        self.collection_poster = util.pick_image(self.obj.title, self.posters, self.library.prioritize_assets, self.library.download_url_assets, asset_location)
-        self.collection_background = util.pick_image(self.obj.title, self.backgrounds, self.library.prioritize_assets, self.library.download_url_assets, asset_location, is_poster=False)
+        self.collection_poster = self.library.pick_image(self.obj.title, self.posters, self.library.prioritize_assets, self.library.download_url_assets, asset_location)
+        self.collection_background = self.library.pick_image(self.obj.title, self.backgrounds, self.library.prioritize_assets, self.library.download_url_assets, asset_location, is_poster=False)
 
         clean_temp = False
         if isinstance(self.collection_poster, KometaImage):
@@ -3520,7 +3512,7 @@ class CollectionBuilder:
         logger.separator(f"Syncing {self.name} {self.Type} to Trakt List {self.sync_to_trakt_list}", space=False, border=False)
         logger.info("")
         if self.obj:
-            self.library._reload(self.obj)
+            self.library.item_reload(self.obj)
         self.load_collection_items()
         current_ids = []
         for item in self.items:
@@ -3597,7 +3589,7 @@ class CollectionBuilder:
     def send_notifications(self, playlist=False):
         if self.obj and self.details["changes_webhooks"] and \
                 (self.created or len(self.notification_additions) > 0 or len(self.notification_removals) > 0):
-            self.library._reload(self.obj)
+            self.library.item_reload(self.obj)
             try:
                 self.library.Webhooks.collection_hooks(
                     self.details["changes_webhooks"],
